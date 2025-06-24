@@ -1,0 +1,248 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(222, 84%, 4.9%);
+  --muted: hsl(210, 40%, 98%);
+  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222, 84%, 4.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222, 84%, 4.9%);
+  --border: hsl(214.3, 31.8%, 91.4%);
+  --input: hsl(214.3, 31.8%, 91.4%);
+  --primary: hsl(217, 91%, 60%);
+  --primary-foreground: hsl(222, 47.4%, 11.2%);
+  --secondary: hsl(210, 40%, 98%);
+  --secondary-foreground: hsl(222, 47.4%, 11.2%);
+  --accent: hsl(210, 40%, 98%);
+  --accent-foreground: hsl(222, 47.4%, 11.2%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(215, 20.2%, 65.1%);
+  --radius: 0.75rem;
+
+  /* FinGuard specific colors */
+  --trust-blue: hsl(217, 91%, 60%);
+  --success-green: hsl(158, 64%, 52%);
+  --alert-red: hsl(0, 84%, 60%);
+  --warning-orange: hsl(31, 81%, 56%);
+  --neutral-gray: hsl(217, 19%, 38%);
+  --bg-light: hsl(220, 14%, 96%);
+  --text-dark: hsl(220, 26%, 14%);
+}
+
+.dark {
+  --background: hsl(222, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20.2%, 65.1%);
+  --popover: hsl(222, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --primary: hsl(217, 91%, 60%);
+  --primary-foreground: hsl(222, 47.4%, 11.2%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(212, 27.4%, 84.1%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-size: 18px; /* Senior-friendly base font size */
+    line-height: 1.6;
+  }
+
+  /* Senior-friendly typography */
+  .text-senior-base {
+    font-size: 18px;
+  }
+
+  .text-senior-lg {
+    font-size: 20px;
+  }
+
+  .text-senior-xl {
+    font-size: 24px;
+  }
+
+  .text-senior-2xl {
+    font-size: 28px;
+  }
+
+  /* FinGuard specific styles */
+  .trust-blue {
+    color: var(--trust-blue);
+  }
+
+  .success-green {
+    color: var(--success-green);
+  }
+
+  .alert-red {
+    color: var(--alert-red);
+  }
+
+  .warning-orange {
+    color: var(--warning-orange);
+  }
+
+  .bg-trust-blue {
+    background-color: var(--trust-blue);
+  }
+
+  .bg-success-green {
+    background-color: var(--success-green);
+  }
+
+  .bg-alert-red {
+    background-color: var(--alert-red);
+  }
+
+  .bg-warning-orange {
+    background-color: var(--warning-orange);
+  }
+
+  .bg-neutral-gray {
+    background-color: var(--neutral-gray);
+  }
+
+  .border-trust-blue {
+    border-color: var(--trust-blue);
+  }
+
+  .border-success-green {
+    border-color: var(--success-green);
+  }
+
+  .border-alert-red {
+    border-color: var(--alert-red);
+  }
+
+  .border-warning-orange {
+    border-color: var(--warning-orange);
+  }
+
+  /* Hover states for better accessibility */
+  .hover\:bg-trust-blue:hover {
+    background-color: var(--trust-blue);
+  }
+
+  .hover\:text-trust-blue:hover {
+    color: var(--trust-blue);
+  }
+
+  .hover\:border-trust-blue:hover {
+    border-color: var(--trust-blue);
+  }
+
+  /* Animation for alerts */
+  @keyframes pulse-alert {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+
+  .pulse-alert {
+    animation: pulse-alert 2s ease-in-out infinite;
+  }
+
+  /* Chart animation */
+  .chart-bar {
+    transition: all 0.3s ease;
+  }
+
+  /* Tooltip styles */
+  .tooltip {
+    position: relative;
+  }
+
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: var(--neutral-gray);
+    color: white;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px;
+    position: absolute;
+    z-index: 1000;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    font-size: 16px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  /* High contrast buttons for accessibility */
+  .btn-primary {
+    background-color: var(--trust-blue);
+    color: white;
+    border: 2px solid var(--trust-blue);
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    font-size: 18px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary:hover {
+    background-color: hsl(217, 91%, 50%);
+    border-color: hsl(217, 91%, 50%);
+  }
+
+  .btn-danger {
+    background-color: var(--alert-red);
+    color: white;
+    border: 2px solid var(--alert-red);
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    font-size: 18px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-danger:hover {
+    background-color: hsl(0, 84%, 50%);
+    border-color: hsl(0, 84%, 50%);
+  }
+
+  .btn-success {
+    background-color: var(--success-green);
+    color: white;
+    border: 2px solid var(--success-green);
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    font-size: 18px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-success:hover {
+    background-color: hsl(158, 64%, 42%);
+    border-color: hsl(158, 64%, 42%);
+  }
+}
