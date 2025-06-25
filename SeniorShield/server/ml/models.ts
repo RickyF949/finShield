@@ -1,5 +1,6 @@
 import { Transaction } from '../../shared/schema';
-import { randomForest } from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs-node';
+import { RandomForestClassifier } from './enhanced-models';
 
 // Feature engineering functions
 export function extractTransactionFeatures(transaction: Transaction, historicalTransactions: Transaction[]) {
@@ -45,10 +46,10 @@ export function extractTransactionFeatures(transaction: Transaction, historicalT
   };
 }
 
-// Anomaly detection using Isolation Forest
+// Anomaly detection using neural network autoencoder
 export class AnomalyDetector {
-  private model: any;
-  private readonly contamination: number = 0.1; // Expected proportion of anomalies
+  private model: tf.LayersModel | null = null;
+  private threshold: number = 0.5;
 
   async train(transactions: Transaction[]) {
     const features = transactions.map(t => 
@@ -57,17 +58,36 @@ export class AnomalyDetector {
       ))
     );
 
-    // Convert features to tensor
     const featureMatrix = features.map(f => Object.values(f));
+    const numFeatures = featureMatrix[0].length;
     
-    // Train isolation forest model
-    this.model = await randomForest.createIsolationForest({
-      contamination: this.contamination,
-      nEstimators: 100,
-      maxSamples: 'auto'
+    // Build autoencoder for anomaly detection
+    const input = tf.input({shape: [numFeatures]});
+    const encoded = tf.layers.dense({units: Math.floor(numFeatures / 2), activation: 'relu'}).apply(input);
+    const decoded = tf.layers.dense({units: numFeatures, activation: 'linear'}).apply(encoded);
+    
+    this.model = tf.model({inputs: input, outputs: decoded as tf.SymbolicTensor});
+    this.model.compile({
+      optimizer: 'adam',
+      loss: 'meanSquaredError'
     });
 
-    await this.model.fit(featureMatrix);
+    const xs = tf.tensor2d(featureMatrix);
+    await this.model.fit(xs, xs, {
+      epochs: 50,
+      batchSize: 32,
+      verbose: 0
+    });
+    
+    // Calculate threshold based on reconstruction errors
+    const predictions = this.model.predict(xs) as tf.Tensor;
+    const errors = tf.losses.meanSquaredError(xs, predictions);
+    const errorData = await errors.data();
+    this.threshold = Array.from(errorData).sort((a, b) => b - a)[Math.floor(errorData.length * 0.1)];
+    
+    xs.dispose();
+    predictions.dispose();
+    errors.dispose();
   }
 
   async detectAnomaly(transaction: Transaction, historicalTransactions: Transaction[]) {
@@ -78,16 +98,20 @@ export class AnomalyDetector {
     const features = extractTransactionFeatures(transaction, historicalTransactions);
     const featureVector = Object.values(features);
     
-    // Get anomaly score (-1 for anomalies, 1 for normal points)
-    const prediction = await this.model.predict([featureVector]);
+    const xs = tf.tensor2d([featureVector]);
+    const prediction = this.model.predict(xs) as tf.Tensor;
+    const error = tf.losses.meanSquaredError(xs, prediction);
+    const errorValue = (await error.data())[0];
     
-    // Convert to probability-like score between 0 and 100
-    // -1 (anomaly) maps to 100, 1 (normal) maps to 0
-    const score = Math.round(((1 - prediction[0]) / 2) * 100);
+    const score = Math.min(Math.round((errorValue / this.threshold) * 100), 100);
+    
+    xs.dispose();
+    prediction.dispose();
+    error.dispose();
     
     return {
       score,
-      isAnomaly: score > 70, // threshold can be adjusted
+      isAnomaly: score > 70,
       features
     };
   }

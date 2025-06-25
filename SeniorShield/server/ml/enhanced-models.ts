@@ -1,6 +1,7 @@
 import { Transaction } from '../../shared/schema';
-import { randomForest } from '@tensorflow/tfjs-node';
 import * as tf from '@tensorflow/tfjs-node';
+import { extractTransactionFeatures } from './models';
+import { RandomForestClassifier as MLRandomForest } from 'ml-random-forest';
 
 // Enhanced feature engineering with more sophisticated patterns
 export function extractEnhancedFeatures(transaction: Transaction, historicalTransactions: Transaction[]) {
@@ -74,39 +75,18 @@ export function extractEnhancedFeatures(transaction: Transaction, historicalTran
   };
 }
 
-// Random Forest Classifier for supervised learning
+// Random Forest Classifier using ml-random-forest
 export class RandomForestClassifier {
-  private model: tf.LayersModel;
-  private readonly numTrees: number = 100;
-  private readonly maxDepth: number = 10;
+  private model: MLRandomForest | null = null;
   private userId: number;
 
   constructor(userId: number) {
     this.userId = userId;
-    this.model = this.buildModel();
-  }
-
-  private buildModel(): tf.LayersModel {
-    const numFeatures = Object.keys(extractEnhancedFeatures({} as Transaction, [])).length;
-    
-    const input = tf.input({shape: [numFeatures]});
-    const dense1 = tf.layers.dense({units: 64, activation: 'relu'}).apply(input);
-    const dropout1 = tf.layers.dropout({rate: 0.3}).apply(dense1);
-    const dense2 = tf.layers.dense({units: 32, activation: 'relu'}).apply(dropout1);
-    const dropout2 = tf.layers.dropout({rate: 0.3}).apply(dense2);
-    const output = tf.layers.dense({units: 1, activation: 'sigmoid'}).apply(dropout2);
-    
-    const model = tf.model({inputs: input, outputs: output as tf.SymbolicTensor});
-    model.compile({
-      optimizer: tf.train.adam(0.001),
-      loss: 'binaryCrossentropy',
-      metrics: ['accuracy']
-    });
-    
-    return model;
   }
 
   async train(transactions: Transaction[], labels: boolean[]) {
+    if (transactions.length === 0) return;
+    
     // Extract features for each transaction
     const features = transactions.map(t => 
       Object.values(extractEnhancedFeatures(t, transactions.filter(ht => 
@@ -114,57 +94,33 @@ export class RandomForestClassifier {
       )))
     );
 
-    // Convert to tensors
-    const xs = tf.tensor2d(features);
-    const ys = tf.tensor2d(labels.map(l => [l ? 1 : 0]));
-
-    // Train the model
-    await this.model.fit(xs, ys, {
-      epochs: 50,
-      batchSize: 32,
-      validationSplit: 0.2,
-      callbacks: {
-        onEpochEnd: (epoch, logs) => {
-          console.log(`Epoch ${epoch}: loss = ${logs?.loss.toFixed(4)}, accuracy = ${logs?.acc.toFixed(4)}`);
-        }
-      }
+    // Train Random Forest model
+    this.model = new MLRandomForest({
+      nEstimators: 50,
+      maxDepth: 10,
+      minSamplesLeaf: 2
     });
-
-    // Clean up tensors
-    xs.dispose();
-    ys.dispose();
+    
+    this.model.train(features, labels);
   }
 
   async predict(transaction: Transaction, historicalTransactions: Transaction[]): Promise<number> {
+    if (!this.model) {
+      return 0;
+    }
+    
     const features = Object.values(extractEnhancedFeatures(transaction, historicalTransactions));
-    const xs = tf.tensor2d([features]);
+    const prediction = this.model.predict([features])[0];
     
-    const prediction = await this.model.predict(xs) as tf.Tensor;
-    const score = (await prediction.data())[0];
-    
-    // Clean up tensors
-    xs.dispose();
-    prediction.dispose();
-    
-    return score * 100; // Convert to percentage
+    return prediction ? 100 : 0; // Convert boolean to percentage
   }
 
   // Update model with new transaction feedback
   async updateModel(transaction: Transaction, isActuallyFraud: boolean, historicalTransactions: Transaction[]) {
-    const features = [Object.values(extractEnhancedFeatures(transaction, historicalTransactions))];
-    const label = [[isActuallyFraud ? 1 : 0]];
+    // For simplicity, we'll retrain with all data including the new transaction
+    const allTransactions = [...historicalTransactions, transaction];
+    const allLabels = [...historicalTransactions.map(t => t.isFlagged), isActuallyFraud];
     
-    const xs = tf.tensor2d(features);
-    const ys = tf.tensor2d(label);
-    
-    // Fine-tune the model with new data
-    await this.model.fit(xs, ys, {
-      epochs: 1,
-      batchSize: 1
-    });
-    
-    // Clean up tensors
-    xs.dispose();
-    ys.dispose();
+    await this.train(allTransactions, allLabels);
   }
 }
